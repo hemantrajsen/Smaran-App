@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui'; // <--- Required for ImageFilter
 import 'package:audioplayers/audioplayers.dart';
+import 'dart:math' as math;
 
 // --- SECTION 1: The Entry Point (KEEP THIS) ---
 // This turns on the engine.
@@ -38,130 +39,179 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  int _counter = 0; // The variable holding the count
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
+  // --- 1. CONSTANTS ---
+  // A single place to change the round size.
+  static const int _roundSize = 108;
+
+  // --- 2. VARIABLES ---
+  int _counter = 0;
   int _malaCount = 0;
 
+  // Cache the preferences so we don't look them up every time
+  SharedPreferences? _prefs;
   final AudioPlayer _audioPlayer = AudioPlayer();
+  late final AnimationController _shakeCtrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 400),
+  );
+  late final Animation<double> _shakeAnim = CurvedAnimation(
+    parent: _shakeCtrl,
+    curve: Curves.elasticIn,
+  );
 
+  // --- 3. LIFECYCLE METHODS ---
   @override
   void initState() {
     super.initState();
-    _loadData(); // <--- Load saved data when app starts
-  }
-
-  // --- NEW: FUNCTION TO LOAD DATA ---
-  // "async" means this might take a few milliseconds, don't freeze the UI
-  Future<void> _loadData() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      // Get the integer. If it doesn't exist (first time), return 0.
-      _counter = prefs.getInt('counter') ?? 0;
-      _malaCount = prefs.getInt('mala_count') ?? 0;
-    });
-  }
-
-  // --- NEW: FUNCTION TO SAVE DATA ---
-  Future<void> _saveData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('counter', _counter);
-    await prefs.setInt('mala_count', _malaCount);
-  }
-
-  void _incrementCounter() {
-    HapticFeedback.lightImpact(); // The bead feel
-
-    setState(() {
-      if (_counter < 108) {
-        _counter++;
-
-        if (_counter == 108) {
-          _malaCount++;
-          _counter = 0;
-          _audioPlayer.play(AssetSource('audio/bell.mp3'));
-          HapticFeedback.heavyImpact();
-        } else {
-          HapticFeedback.lightImpact();
-        }
-      } else {
-        // ROUND COMPLETE!
-        HapticFeedback.heavyImpact();
-      }
-    });
-    _saveData(); // <--- SAVE TO DISK IMMEDIATELY
-  }
-
-  // Function to remove the last bead (Mistake correction)
-  void _decrementCounter() {
-    setState(() {
-      if (_counter > 0) {
-        _counter--;
-        HapticFeedback.lightImpact();
-      }
-    });
-    _saveData(); // <--- SAVE HERE TOO
-  }
-
-  // Function to wipe everything
-  void _resetCounts() {
-    setState(() {
-      _counter = 0;
-
-      HapticFeedback.mediumImpact();
-    });
-    _saveData(); // <--- SAVE the reset state TOO
+    _initPrefs(); // Start loading data immediately
   }
 
   @override
+  void dispose() {
+    _shakeCtrl.dispose();
+    _audioPlayer.dispose(); // CLEANUP: Free up memory when app closes
+    super.dispose();
+  }
+
+  // --- 4. ASYNC LOGIC ---
+  Future<void> _initPrefs() async {
+    _prefs = await SharedPreferences.getInstance();
+
+    // SAFETY CHECK: Are we still on this screen?
+    if (!mounted) return;
+
+    setState(() {
+      _counter = _prefs?.getInt('counter') ?? 0;
+      _malaCount = _prefs?.getInt('mala_count') ?? 0;
+    });
+  }
+
+  Future<void> _saveData() async {
+    final prefs = _prefs;
+    // Guard clause: If prefs aren't loaded yet, don't try to save
+    if (prefs == null) return;
+
+    // Save both values in parallel (faster)
+    await Future.wait([
+      prefs.setInt('counter', _counter),
+      prefs.setInt('mala_count', _malaCount),
+    ]);
+  }
+
+  // --- 5. ACTION FUNCTIONS ---
+  Future<void> _incrementCounter() async {
+    // 1. If we are currently BELOW 108...
+    if (_counter < _roundSize) {
+      setState(() {
+        _counter++; // Increment to 108
+      });
+
+      // 2. Did we JUST hit 108?
+      if (_counter == _roundSize) {
+        setState(() {
+          _malaCount++; // Credit the Mala immediately
+        });
+        HapticFeedback.heavyImpact(); // Strong vibration
+        await _audioPlayer.play(AssetSource('audio/bell.mp3')); // Ding!
+      } else {
+        HapticFeedback.lightImpact(); // Normal vibration
+      }
+    }
+    // 3. If we are SITTING AT 108, the next tap starts a new round
+    else {
+      setState(() {
+        _counter = 1; // Start fresh at 1
+      });
+      HapticFeedback.lightImpact();
+    }
+
+    await _saveData();
+  }
+
+  Future<void> _decrementCounter() async {
+    if (_counter == 0) return; // Boundary check
+
+    setState(() {
+      _counter--;
+    });
+    HapticFeedback.lightImpact();
+    await _saveData();
+  }
+
+  // Unified Reset Function
+  Future<void> _resetCounts({bool resetMala = false}) async {
+    setState(() {
+      _counter = 0;
+      if (resetMala) {
+        _malaCount = 0;
+      }
+    });
+    HapticFeedback.mediumImpact();
+    await _saveData();
+  }
+
+  // Shake + hint when user taps expecting a full wipe
+  Future<void> _triggerShakeHint() async {
+    if (_shakeCtrl.isAnimating) return;
+    _shakeCtrl.forward(from: 0);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Hold tight to Reset all Malas Completed!!!📿'),
+        duration: Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // --- 6. THE UI (Your Existing Design) ---
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 1. KEY MAGIC: Allows the background image to flow BEHIND the header
       extendBodyBehindAppBar: true,
-
       appBar: AppBar(
         title: const Text(
           'Smaran',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Color.fromARGB(105, 0, 0, 0),
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
         ),
         centerTitle: true,
-
-        // 2. Make the standard color invisible
         backgroundColor: Colors.transparent,
-        elevation: 0, // Removes the shadow
-        // 3. The Glass Effect specifically for the Header
+        elevation: 0,
         flexibleSpace: ClipRect(
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-            child: Container(
-              color: Colors.white.withOpacity(0.05), // Milky white tint
-            ),
+            filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+            child: Container(color: Colors.white.withOpacity(0.05)),
           ),
         ),
-
-        // Your existing Reset/Undo buttons
         actions: [
-          IconButton(
-            onPressed: _resetCounts,
-            icon: const Icon(Icons.refresh, color: Colors.brown),
-            tooltip: 'Reset Round',
-            onLongPress: () {
-              setState(() {
-                _counter = 0;
-                _malaCount = 0;
-                HapticFeedback.heavyImpact();
-              });
-              _saveData();
+          AnimatedBuilder(
+            animation: _shakeAnim,
+            builder: (context, child) {
+              final dx =
+                  math.sin(_shakeAnim.value * math.pi * 8) * 6; // small wiggle
+              return Transform.translate(offset: Offset(dx, 0), child: child);
             },
+            child: IconButton(
+              // Short Press: reset beads + warn that long-press clears all
+              onPressed: () async {
+                await _resetCounts(resetMala: false);
+                await _triggerShakeHint();
+              },
+              icon: const Icon(
+                Icons.refresh,
+                color: Color.fromARGB(210, 0, 0, 0),
+              ),
+              tooltip:
+                  'Tap: reset round. Long-press: reset round + total malas.',
+              // Long Press: clear everything
+              onLongPress: () => _resetCounts(resetMala: true),
+            ),
           ),
         ],
       ),
-
-      // Your existing Body code (Background Image + Glass Box + Counter)
       body: GestureDetector(
-        onTap: _incrementCounter,
+        onTap: () => _incrementCounter(),
         child: Container(
           width: double.infinity,
           height: double.infinity,
@@ -169,14 +219,13 @@ class _HomeScreenState extends State<HomeScreen> {
             image: DecorationImage(
               image: AssetImage('assets/images/background.jpeg'),
               fit: BoxFit.cover,
-              // Adjust opacity if you want the image brighter/darker
-              opacity: 0.58,
+              opacity: 0.8,
             ),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // --- Your Glass "Malas Completed" Box ---
+              // Glass Box
               ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: BackdropFilter(
@@ -214,10 +263,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 40),
 
-              // --- Your Circle Counter ---
+              // Circle Progress
               Stack(
                 alignment: Alignment.center,
                 children: [
@@ -225,10 +273,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: 300,
                     height: 300,
                     child: CircularProgressIndicator(
-                      value: _counter / 108,
-                      backgroundColor: Colors.white.withOpacity(
-                        0.44,
-                      ), // Glassy track
+                      // Uses the constant now!
+                      value: _counter / _roundSize,
+                      backgroundColor: Colors.white.withOpacity(0.3),
                       color: Colors.deepOrange,
                       strokeWidth: 20,
                     ),
@@ -244,24 +291,26 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: Colors.deepOrange,
                         ),
                       ),
-                      const Text(
-                        '/ 108',
+                      Text(
+                        '/ $_roundSize', // Uses the constant
                         style: TextStyle(fontSize: 24, color: Colors.black54),
                       ),
                     ],
                   ),
                 ],
               ),
-
               const SizedBox(height: 50),
 
-              // --- Undo Button ---
+              // Undo Button
               TextButton.icon(
-                onPressed: _decrementCounter,
-                icon: const Icon(Icons.undo, color: Colors.black54),
+                onPressed: () => _decrementCounter(),
+                icon: const Icon(
+                  Icons.undo,
+                  color: Color.fromARGB(210, 0, 0, 0),
+                ),
                 label: const Text(
                   "Undo Last Bead",
-                  style: TextStyle(color: Colors.black54),
+                  style: TextStyle(color: Color.fromARGB(210, 0, 0, 0)),
                 ),
               ),
             ],
