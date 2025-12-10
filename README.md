@@ -1,16 +1,40 @@
-# smaran
+# Smaran App 🕉️
 
-A new Flutter project.
+**Smaran** (Recall/Remembrance) is a dedicated mobile application built with **Flutter** to assist devotees in their daily spiritual practices. Designed with an **ISKCON-inspired theme**, it serves as a digital companion for counting Japa (mantra meditation) and tracking Malas.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 📱 Project Overview
 
-A few resources to get you started if this is your first Flutter project:
+The primary goal of this project is to blend modern mobile technology with traditional spiritual discipline. It replaces the need for physical bead bags in situations where they are impractical, allowing users to maintain their spiritual vows seamlessly.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### 🌟 Key Features
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- **Digital Japa Counter:** A large, accessible interface to increment counts with haptic feedback (vibration) for a tactile experience.
+- **Mala Tracker:** Automatically tracks the number of completed Malas (1 Mala = 108 counts).
+- **ISKCON Theme:** a UI/UX design focusing on serenity, using a color palette inspired by traditional Vedic aesthetics.
+- **Progress History:** Local storage to save daily counts and view weekly progress.
+- **Reset & Correction:** easy options to reset counts or correct accidental clicks.
+
+---
+## 🛠️ Tech Stack
+
+- **Framework:** [Flutter](https://flutter.dev/) (Dart)
+- **Architecture:** MVVM (Model-View-ViewModel)
+- **State Management:** Provider
+- **Local Storage:** SharedPreferences
+- **Platform:** Android & iOS
+
+---
+
+ ## 🤝 Contributing
+
+ - **Contributions are welcome! If you have suggestions for new features or improvements**
+
+---
+
+## 👤 Author
+
+- **Hemant Raj Sen**
+
+- **GitHub:** hemantrajsen
