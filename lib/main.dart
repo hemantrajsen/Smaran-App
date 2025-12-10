@@ -1,18 +1,21 @@
+// --- IMPORTS ---
+import 'package:google_fonts/google_fonts.dart'; // <--- NEW IMPORT
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:ui'; // <--- Required for ImageFilter
+import 'dart:ui';
 import 'package:audioplayers/audioplayers.dart';
 import 'dart:math' as math;
 
-// --- SECTION 1: The Entry Point (KEEP THIS) ---
-// This turns on the engine.
+// --- CONSTANTS & THEME ---
+const Color kSaffron = Color(0xFFFF9933); // Deep Orange/Gold
+const Color kTulsiGreen = Color(0xFF4CAF50); // Fresh Green
+const Color kGlassWhite = Color(0x1FFFFFFF); // 12% Opacity White
+
 void main() {
   runApp(const SmaranApp());
 }
 
-// --- SECTION 2: The App Setup (KEEP THIS) ---
-// This sets up the theme and routing.
 class SmaranApp extends StatelessWidget {
   const SmaranApp({super.key});
 
@@ -21,8 +24,23 @@ class SmaranApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Smaran',
-      theme: ThemeData(primarySwatch: Colors.orange, useMaterial3: true),
-      // This line points to the HomeScreen below
+      theme: ThemeData(
+        useMaterial3: true,
+        primaryColor: kSaffron,
+        // Define the default brightness and colors
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: kSaffron,
+          brightness: Brightness.light,
+        ),
+        // Apply "Cinzel" font to all Headings automatically
+        // textTheme: GoogleFonts.eagleLakeTextTheme().copyWith(
+        //   displayLarge: GoogleFonts.lato(
+        //     fontSize: 80,
+        //     fontWeight: FontWeight.bold,
+        //   ),
+        //   bodyLarge: GoogleFonts.lato(fontSize: 18),
+        // ),
+      ),
       home: const HomeScreen(),
     );
   }
@@ -97,7 +115,10 @@ class _HomeScreenState extends State<HomeScreen>
       // A. Save old data to History
       List<String> history = _prefs?.getStringList('history_log') ?? [];
       // Save using Yesterday's Time
-      history.insert(0, "$lastDate | $lastTime | $savedMala Malas (Auto-Saved)");
+      history.insert(
+        0,
+        "$lastDate | $lastTime | $savedMala Malas (Auto-Saved)",
+      );
 
       await _prefs?.setStringList('history_log', history);
 
@@ -136,7 +157,9 @@ class _HomeScreenState extends State<HomeScreen>
     String today = DateTime.now().toString().split(' ')[0];
 
     final now = DateTime.now();
-    String time = "${now.hour}:${now.minute.toString().padLeft(2, '0')}";
+    int hour12 = now.hour % 12 == 0 ? 12 : now.hour % 12;
+    String amPm = now.hour >= 12 ? 'PM' : 'AM';
+    String time = "$hour12:${now.minute.toString().padLeft(2, '0')} $amPm";
 
     // Save both values in parallel (faster)
     await Future.wait([
@@ -166,7 +189,11 @@ class _HomeScreenState extends State<HomeScreen>
 
         if (vibe) HapticFeedback.heavyImpact(); // Strong vibration
         if (sound)
-          await _audioPlayer.play(AssetSource('audio/bell.mp3')); // Ding!
+          try {
+            await _audioPlayer.play(AssetSource('audio/bell.mp3')); // Ding!
+          } catch (e) {
+            debugPrint('Audio playback failed: $e');
+          }
       } else {
         bool vibe = _prefs?.getBool('isVibrationOn') ?? true;
         if (vibe) HapticFeedback.lightImpact();
@@ -177,7 +204,8 @@ class _HomeScreenState extends State<HomeScreen>
       setState(() {
         _counter = 1; // Start fresh at 1
       });
-      HapticFeedback.lightImpact();
+      bool vibe = _prefs?.getBool('isVibrationOn') ?? true;
+      if (vibe) HapticFeedback.lightImpact();
     }
 
     await _saveData();
@@ -189,7 +217,10 @@ class _HomeScreenState extends State<HomeScreen>
     setState(() {
       _counter--;
     });
-    HapticFeedback.lightImpact();
+
+    bool vibe = _prefs?.getBool('isVibrationOn') ?? true;
+    if (vibe) HapticFeedback.lightImpact();
+
     await _saveData();
   }
 
@@ -200,17 +231,19 @@ class _HomeScreenState extends State<HomeScreen>
       // Check if we have rounds to save
       if (prefs != null && _malaCount > 0) {
         List<String> history = prefs.getStringList('history_log') ?? [];
-        
+
         // 1. Get Date
         String date = DateTime.now().toString().split(' ')[0];
-        
+
         // 2. Get Time (Right Now)
         final now = DateTime.now();
-        String time = "${now.hour}:${now.minute.toString().padLeft(2, '0')}";
+        int hour12 = now.hour % 12 == 0 ? 12 : now.hour % 12;
+        String amPm = now.hour >= 12 ? 'PM' : 'AM';
+        String time = "$hour12:${now.minute.toString().padLeft(2, '0')} $amPm";
 
         // 3. THE FIX: Create the string with THREE parts (Date | Time | Count)
         // Previous code might have been missing the middle part!
-        String entry = "$date | $time | $_malaCount Malas"; 
+        String entry = "$date | $time | $_malaCount Malas";
 
         // 4. Save to list
         history.insert(0, entry);
@@ -225,11 +258,11 @@ class _HomeScreenState extends State<HomeScreen>
         _malaCount = 0;
       }
     });
-    
+
     // Haptic Feedback check
     bool vibe = _prefs?.getBool('isVibrationOn') ?? true;
     if (vibe) HapticFeedback.mediumImpact();
-    
+
     // Save the "0" state to memory
     await _saveData();
   }
@@ -261,12 +294,12 @@ class _HomeScreenState extends State<HomeScreen>
               // 1. The Header (Profile/App Info)
               UserAccountsDrawerHeader(
                 decoration: const BoxDecoration(
-                  color: Colors.deepOrange, // Saffron header
+                  color: Color.fromARGB(255, 255, 231, 194), // Saffron header
                   image: DecorationImage(
                     image: AssetImage(
-                      'assets/images/background.jpeg',
+                      'assets/images/another.jpeg',
                     ), // Reusing your bg
-                    fit: BoxFit.cover,
+                    fit: BoxFit.fitWidth,
                     opacity: 0.5,
                   ),
                 ),
@@ -317,8 +350,31 @@ class _HomeScreenState extends State<HomeScreen>
                 title: const Text('Reset Everything'),
                 onTap: () async {
                   Navigator.pop(context); // Close drawer first
-                  await _resetCounts(resetMala: true); // Call your reset logic
-                  await _triggerShakeHint();
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Reset Everything?'),
+                      content: const Text(
+                        'This will save your current malas to history and reset the counter to zero.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text(
+                            'Reset',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirm == true) {
+                    await _resetCounts(resetMala: true);
+                  }
                 },
               ),
             ],
@@ -326,9 +382,12 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       ),
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Smaran',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+          style: GoogleFonts.eagleLake(
+            fontWeight: FontWeight.bold,
+            color: const Color.fromARGB(239, 243, 242, 242),
+          ),
         ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
@@ -336,7 +395,7 @@ class _HomeScreenState extends State<HomeScreen>
         flexibleSpace: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
-            child: Container(color: Colors.white.withOpacity(0.05)),
+            child: Container(color: Colors.white.withValues(alpha: 0.03)),
           ),
         ),
         actions: [
@@ -355,12 +414,38 @@ class _HomeScreenState extends State<HomeScreen>
               },
               icon: const Icon(
                 Icons.refresh,
-                color: Color.fromARGB(210, 0, 0, 0),
+                color: Color.fromARGB(239, 243, 242, 242),
               ),
               tooltip:
                   'Tap: reset round. Long-press: reset round + total malas.',
               // Long Press: clear everything
-              onLongPress: () => _resetCounts(resetMala: true),
+              onLongPress: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Reset Everything?'),
+                    content: const Text(
+                      'Save current malas to history and reset to zero?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text(
+                          'Reset',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true) {
+                  await _resetCounts(resetMala: true);
+                }
+              },
             ),
           ),
         ],
@@ -374,43 +459,63 @@ class _HomeScreenState extends State<HomeScreen>
             image: DecorationImage(
               image: AssetImage('assets/images/background.jpeg'),
               fit: BoxFit.cover,
-              opacity: 0.8,
+              opacity: 0.92,
             ),
           ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
+              const SizedBox(height: 200), // Push everything down from top
+              // const Spacer(flex: 1),
               // Glass Box
               ClipRRect(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(50),
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
+                      horizontal: 22,
+                      vertical: 10,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.2)),
+                      color: const Color.fromARGB(
+                        56,
+                        255,
+                        255,
+                        255,
+                      ), // <--- Use the constant
+                      borderRadius: BorderRadius.circular(
+                        50,
+                      ), // <--- Match the 50 from above
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        width: 1.5,
+                      ), // <--- ADD Border
+                      boxShadow: [
+                        // <--- ADD Shadow for depth
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ],
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
+                        Text(
                           "Malas Completed: ",
-                          style: TextStyle(
+                          style: GoogleFonts.rubik(
                             fontSize: 18,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                         Text(
                           "$_malaCount",
                           style: const TextStyle(
-                            fontSize: 22,
+                            fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.deepOrange,
+                            color: kSaffron,
                           ),
                         ),
                       ],
@@ -430,9 +535,10 @@ class _HomeScreenState extends State<HomeScreen>
                     child: CircularProgressIndicator(
                       // Uses the constant now!
                       value: _counter / _roundSize,
-                      backgroundColor: Colors.white.withOpacity(0.3),
-                      color: Colors.deepOrange,
+                      backgroundColor: Colors.white.withValues(alpha: 0.3),
+                      color: kSaffron,
                       strokeWidth: 20,
+                      strokeCap: StrokeCap.round,
                     ),
                   ),
                   Column(
@@ -441,14 +547,17 @@ class _HomeScreenState extends State<HomeScreen>
                       Text(
                         '$_counter',
                         style: const TextStyle(
-                          fontSize: 80,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.deepOrange,
+                          fontSize: 90,
+                          fontWeight: FontWeight.w600,
+                          color: kSaffron,
                         ),
                       ),
                       Text(
                         '/ $_roundSize', // Uses the constant
-                        style: TextStyle(fontSize: 24, color: Colors.black54),
+                        style: TextStyle(
+                          fontSize: 24,
+                          color: const Color.fromARGB(192, 255, 255, 255),
+                        ),
                       ),
                     ],
                   ),
@@ -463,9 +572,13 @@ class _HomeScreenState extends State<HomeScreen>
                   Icons.undo,
                   color: Color.fromARGB(210, 0, 0, 0),
                 ),
-                label: const Text(
+                label: Text(
                   "Undo Last Bead",
-                  style: TextStyle(color: Color.fromARGB(210, 0, 0, 0)),
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    color: Color.fromARGB(210, 0, 0, 0),
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ],
@@ -514,11 +627,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
           IconButton(
             icon: const Icon(Icons.delete_sweep, color: Colors.red),
             onPressed: () async {
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.remove('history_log');
-              setState(() => _pastHistory = []);
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Clear History?'),
+                  content: const Text(
+                    'This will delete all past records. This cannot be undone.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text(
+                        'Delete',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.remove('history_log');
+                setState(() => _pastHistory = []);
+              }
             },
-          )
+          ),
         ],
       ),
       body: ListView.builder(
@@ -534,7 +671,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 leading: const Icon(Icons.whatshot, color: Colors.deepOrange),
                 title: const Text(
                   "Today (In Progress)",
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.deepOrange),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepOrange,
+                  ),
                 ),
                 subtitle: Text(
                   "$_todayMalaCount Malas • Last active: $_lastActiveTime",
@@ -566,13 +706,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
           return ListTile(
             leading: const Icon(Icons.history_edu, color: Colors.grey),
-            title: Text(date, style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(
+              date,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             subtitle: Row(
               children: [
                 Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
                 const SizedBox(width: 4),
                 Text("$time  •  ", style: TextStyle(color: Colors.grey[800])),
-                Text(count, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  count,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ],
             ),
           );
