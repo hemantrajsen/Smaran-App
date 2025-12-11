@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'dart:ui';
 import 'package:audioplayers/audioplayers.dart';
 import 'dart:math' as math;
+import 'package:package_info_plus/package_info_plus.dart';
 
 // --- CONSTANTS & THEME ---
 const Color kSaffron = Color(0xFFFF9933);
@@ -103,6 +104,7 @@ class _HomeScreenState extends State<HomeScreen>
       await _prefs?.setStringList('history_log', history);
       savedCounter = 0;
       savedMala = 0;
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('New Day started! Yesterday saved to History. 🌅'),
@@ -285,6 +287,7 @@ class _HomeScreenState extends State<HomeScreen>
                 onChanged: (val) async {
                   setState(() => _isFocusModeOn = val);
                   await _prefs?.setBool('isFocusModeOn', val);
+                  if (!context.mounted) return;
                   Navigator.pop(context);
                 },
               ),
@@ -451,6 +454,7 @@ class _HomeScreenState extends State<HomeScreen>
               child: IconButton(
                 onPressed: () async {
                   await _resetCounts(resetMala: false);
+                  if (!context.mounted) return;
                   if (_shakeCtrl.isAnimating) return;
                   _shakeCtrl.forward(from: 0);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -718,6 +722,7 @@ class _MantraScreenState extends State<MantraScreen> {
                 setState(() => _mantraList.add(controller.text));
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.setStringList('saved_mantras', _mantraList);
+                if (!context.mounted) return;
                 Navigator.pop(ctx);
               }
             },
@@ -994,11 +999,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isVibrationOn = true;
   bool _isSoundOn = true;
   double _targetRounds = 16;
+  String _appVersion = "Loading...";
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final PackageInfo info = await PackageInfo.fromPlatform();
+    setState(() {
+      // This creates "Version 1.0.0 (Build 1)"
+      _appVersion = "Version ${info.version} (${info.buildNumber})";
+    });
   }
 
   Future<void> _loadSettings() async {
@@ -1042,7 +1057,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             secondary: const Icon(Icons.volume_up),
             title: const Text("Chant Sound"),
             value: _isSoundOn,
-            activeColor: Colors.deepOrange,
+            activeThumbColor: Colors.deepOrange,
             onChanged: (val) {
               setState(() => _isSoundOn = val);
               _updateSetting('isSoundOn', val);
@@ -1094,6 +1109,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               }
             },
           ),
+          const SizedBox(height: 20), // Spacing
+          // THE VERSION ROW
+          Center(
+            child: Text(
+              _appVersion,
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+            ),
+          ),
+          const SizedBox(height: 20),
         ],
       ),
     );
