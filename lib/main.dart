@@ -1,5 +1,5 @@
 // --- IMPORTS ---
-import 'package:google_fonts/google_fonts.dart'; // <--- NEW IMPORT
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,9 +8,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'dart:math' as math;
 
 // --- CONSTANTS & THEME ---
-const Color kSaffron = Color(0xFFFF9933); // Deep Orange/Gold
-const Color kTulsiGreen = Color(0xFF4CAF50); // Fresh Green
-const Color kGlassWhite = Color(0x1FFFFFFF); // 12% Opacity White
+const Color kSaffron = Color(0xFFFF9933);
 
 void main() {
   runApp(const SmaranApp());
@@ -27,29 +25,17 @@ class SmaranApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         primaryColor: kSaffron,
-        // Define the default brightness and colors
         colorScheme: ColorScheme.fromSeed(
           seedColor: kSaffron,
           brightness: Brightness.light,
         ),
-        // Apply "Cinzel" font to all Headings automatically
-        // textTheme: GoogleFonts.eagleLakeTextTheme().copyWith(
-        //   displayLarge: GoogleFonts.lato(
-        //     fontSize: 80,
-        //     fontWeight: FontWeight.bold,
-        //   ),
-        //   bodyLarge: GoogleFonts.lato(fontSize: 18),
-        // ),
       ),
       home: const HomeScreen(),
     );
   }
 }
 
-// --- SECTION 3: The Logic & UI (CHANGE THIS) ---
-// We deleted the old 'Stateless' version and replaced it with this
-// new 'Stateful' version so we can update the count.
-
+// --- HOME SCREEN ---
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -59,16 +45,17 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
-  // --- 1. CONSTANTS ---
-  // A single place to change the round size.
-  static const int _roundSize = 108;
+  // --- VARIABLES ---
 
-  // --- 2. VARIABLES ---
+  int _targetSankalpa = 16; // Default to 16
+  static const int _roundSize = 108;
   int _counter = 0;
   int _malaCount = 0;
   bool _isFocusModeOn = false;
 
-  // Cache the preferences so we don't look them up every time
+  // The Active Mantra to display in the header
+  String _drawerMantra = "Hare Krishna";
+
   SharedPreferences? _prefs;
   final AudioPlayer _audioPlayer = AudioPlayer();
   late final AnimationController _shakeCtrl = AnimationController(
@@ -80,90 +67,79 @@ class _HomeScreenState extends State<HomeScreen>
     curve: Curves.elasticIn,
   );
 
-  // --- 3. LIFECYCLE METHODS ---
   @override
   void initState() {
     super.initState();
-    _initPrefs(); // Start loading data immediately
+    _initPrefs();
+    // Preload audio for instant playback
+    _audioPlayer.setSource(AssetSource('audio/bell.mp3'));
   }
 
   @override
   void dispose() {
     _shakeCtrl.dispose();
-    _audioPlayer.dispose(); // CLEANUP: Free up memory when app closes
+    _audioPlayer.dispose();
     super.dispose();
   }
 
-  // --- 4. ASYNC LOGIC ---
   Future<void> _initPrefs() async {
     _prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
 
-    // 1. Load the raw data
+    // Load Counter Data
     int savedCounter = _prefs?.getInt('counter') ?? 0;
     int savedMala = _prefs?.getInt('mala_count') ?? 0;
     String? lastDate = _prefs?.getString('last_active_date');
-
-    // 2. Get Today's Date
     String today = DateTime.now().toString().split(' ')[0];
 
-    // 3. THE SMART CHECK: Is today a new day?
+    // New Day Logic: Reset if date changed
     if (lastDate != null && lastDate != today && savedMala > 0) {
-      // YES! It is a new day, and we have unsaved data from the past.
-
       String lastTime = _prefs?.getString('last_active_time') ?? "00:00";
-
-      // A. Save old data to History
       List<String> history = _prefs?.getStringList('history_log') ?? [];
-      // Save using Yesterday's Time
       history.insert(
         0,
         "$lastDate | $lastTime | $savedMala Malas (Auto-Saved)",
       );
-
       await _prefs?.setStringList('history_log', history);
-
-      // B. Reset for the fresh new day
       savedCounter = 0;
       savedMala = 0;
-
-      // C. Tell the user what happened
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'New Day started! Yesterday\'s rounds saved to History. 🌅',
-          ),
+          content: Text('New Day started! Yesterday saved to History. 🌅'),
           backgroundColor: Colors.green,
-          duration: Duration(seconds: 4),
         ),
       );
     }
 
-    // 4. Update the UI with the final values
     setState(() {
       _counter = savedCounter;
       _malaCount = savedMala;
       _isFocusModeOn = _prefs?.getBool('isFocusModeOn') ?? false;
+      // Load the active mantra from storage
+      _drawerMantra = _prefs?.getString('active_mantra') ?? "Hare Krishna";
+      _targetSankalpa = _prefs?.getInt('targetRounds') ?? 16;
     });
 
-    // 5. Ensure we mark today as active immediately
     await _saveData();
+  }
+
+  // Helper to refresh just the drawer info when returning from MantraScreen
+  Future<void> _refreshDrawer() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _drawerMantra = prefs.getString('active_mantra') ?? "Hare Krishna";
+    });
   }
 
   Future<void> _saveData() async {
     final prefs = _prefs;
-    // Guard clause: If prefs aren't loaded yet, don't try to save
     if (prefs == null) return;
-
-    // Get Today's Date (Format: YYYY-MM-DD)
     String today = DateTime.now().toString().split(' ')[0];
-
     final now = DateTime.now();
     int hour12 = now.hour % 12 == 0 ? 12 : now.hour % 12;
     String amPm = now.hour >= 12 ? 'PM' : 'AM';
     String time = "$hour12:${now.minute.toString().padLeft(2, '0')} $amPm";
 
-    // Save both values in parallel (faster)
     await Future.wait([
       prefs.setInt('counter', _counter),
       prefs.setInt('mala_count', _malaCount),
@@ -172,150 +148,131 @@ class _HomeScreenState extends State<HomeScreen>
     ]);
   }
 
-  // --- 5. ACTION FUNCTIONS ---
   Future<void> _incrementCounter() async {
-    // 1. If we are currently BELOW 108...
     if (_counter < _roundSize) {
-      setState(() {
-        _counter++; // Increment to 108
-      });
-
-      // 2. Did we JUST hit 108?
+      setState(() => _counter++);
       if (_counter == _roundSize) {
-        setState(() {
-          _malaCount++; // Credit the Mala immediately
-        });
-
+        setState(() => _malaCount++);
         bool vibe = _prefs?.getBool('isVibrationOn') ?? true;
         bool sound = _prefs?.getBool('isSoundOn') ?? true;
-
-        if (vibe) HapticFeedback.heavyImpact(); // Strong vibration
-        if (sound)
+        if (vibe) HapticFeedback.heavyImpact();
+        if (sound) {
           try {
-            await _audioPlayer.play(AssetSource('audio/bell.mp3')); // Ding!
+            await _audioPlayer.stop();
+            await _audioPlayer.play(AssetSource('audio/bell.mp3'));
           } catch (e) {
-            debugPrint('Audio playback failed: $e');
+            debugPrint('Audio error: $e');
           }
+        }
       } else {
         bool vibe = _prefs?.getBool('isVibrationOn') ?? true;
         if (vibe) HapticFeedback.lightImpact();
       }
-    }
-    // 3. If we are SITTING AT 108, the next tap starts a new round
-    else {
-      setState(() {
-        _counter = 1; // Start fresh at 1
-      });
+    } else {
+      setState(() => _counter = 1);
       bool vibe = _prefs?.getBool('isVibrationOn') ?? true;
       if (vibe) HapticFeedback.lightImpact();
     }
-
     await _saveData();
   }
 
   Future<void> _decrementCounter() async {
-    if (_counter == 0) return; // Boundary check
-
-    setState(() {
-      _counter--;
-    });
-
+    if (_counter == 0) return;
+    setState(() => _counter--);
     bool vibe = _prefs?.getBool('isVibrationOn') ?? true;
     if (vibe) HapticFeedback.lightImpact();
-
     await _saveData();
   }
 
-  // Unified Reset Function
   Future<void> _resetCounts({bool resetMala = false}) async {
-    if (resetMala) {
+    if (resetMala && _malaCount > 0) {
       final prefs = _prefs;
-      // Check if we have rounds to save
-      if (prefs != null && _malaCount > 0) {
-        List<String> history = prefs.getStringList('history_log') ?? [];
-
-        // 1. Get Date
-        String date = DateTime.now().toString().split(' ')[0];
-
-        // 2. Get Time (Right Now)
-        final now = DateTime.now();
-        int hour12 = now.hour % 12 == 0 ? 12 : now.hour % 12;
-        String amPm = now.hour >= 12 ? 'PM' : 'AM';
-        String time = "$hour12:${now.minute.toString().padLeft(2, '0')} $amPm";
-
-        // 3. THE FIX: Create the string with THREE parts (Date | Time | Count)
-        // Previous code might have been missing the middle part!
-        String entry = "$date | $time | $_malaCount Malas";
-
-        // 4. Save to list
-        history.insert(0, entry);
-        await prefs.setStringList('history_log', history);
-      }
+      List<String> history = prefs?.getStringList('history_log') ?? [];
+      String date = DateTime.now().toString().split(' ')[0];
+      final now = DateTime.now();
+      int hour12 = now.hour % 12 == 0 ? 12 : now.hour % 12;
+      String amPm = now.hour >= 12 ? 'PM' : 'AM';
+      String time = "$hour12:${now.minute.toString().padLeft(2, '0')} $amPm";
+      history.insert(0, "$date | $time | $_malaCount Malas");
+      await prefs?.setStringList('history_log', history);
     }
-
-    // Reset the counters on screen
     setState(() {
       _counter = 0;
-      if (resetMala) {
-        _malaCount = 0;
-      }
+      if (resetMala) _malaCount = 0;
     });
-
-    // Haptic Feedback check
-    bool vibe = _prefs?.getBool('isVibrationOn') ?? true;
-    if (vibe) HapticFeedback.mediumImpact();
-
-    // Save the "0" state to memory
     await _saveData();
   }
 
-  // Shake + hint when user taps expecting a full wipe
-  Future<void> _triggerShakeHint() async {
-    if (_shakeCtrl.isAnimating) return;
-    _shakeCtrl.forward(from: 0);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Hold tight to Reset all Malas Completed!!!📿'),
-        duration: Duration(seconds: 1),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  // --- 6. THE UI (Your Existing Design) ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
       drawer: Drawer(
         child: Container(
-          color: Colors.white, // Background color of the drawer
+          color: Colors.white,
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
-              // 1. The Header (Profile/App Info)
-              UserAccountsDrawerHeader(
+              // --- UPDATED DRAWER HEADER ---
+              // Uses a Custom Container instead of UserAccountsDrawerHeader to utilize full space
+              Container(
+                height: 240, // Taller to fit mantra
                 decoration: const BoxDecoration(
-                  color: Color.fromARGB(255, 255, 231, 194), // Saffron header
+                  color: Color.fromARGB(255, 255, 231, 194),
                   image: DecorationImage(
-                    image: AssetImage(
-                      'assets/images/another.jpeg',
-                    ), // Reusing your bg
-                    fit: BoxFit.fitWidth,
+                    image: AssetImage('assets/images/another.jpeg'),
+                    fit: BoxFit.cover,
                     opacity: 0.5,
                   ),
                 ),
-                accountName: const Text(
-                  "Hare Krishna",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-                accountEmail: const Text(
-                  "Keep Chanting...",
-                  style: TextStyle(color: Colors.white70),
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Small Label
+                        const Text(
+                          "Current Sankalpa:",
+                          style: TextStyle(
+                            color: Colors.black54,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // The Mantra Text - Expanded to fill space
+                        Expanded(
+                          child: Center(
+                            child: SingleChildScrollView(
+                              child: Text(
+                                _drawerMantra,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.eagleLake(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                  color: Colors.black87,
+                                  height: 1.2,
+                                  shadows: [
+                                    const Shadow(
+                                      blurRadius: 2,
+                                      color: Colors.white,
+                                      offset: Offset(1, 1),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
 
-              // 2. Menu Items
+              // Focus Mode Switch
               SwitchListTile(
                 secondary: Icon(
                   _isFocusModeOn ? Icons.visibility_off : Icons.visibility,
@@ -328,9 +285,31 @@ class _HomeScreenState extends State<HomeScreen>
                 onChanged: (val) async {
                   setState(() => _isFocusModeOn = val);
                   await _prefs?.setBool('isFocusModeOn', val);
-                  Navigator.pop(context); // Close drawer after toggle
+                  Navigator.pop(context);
                 },
               ),
+
+              // --- MANTRA LIBRARY ROW ---
+              ListTile(
+                leading: const Icon(
+                  Icons.record_voice_over,
+                  color: Colors.black87,
+                ),
+                title: const Text('Mantra Library'),
+                subtitle: const Text('Set your active prayer'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MantraScreen(),
+                    ),
+                  ).then(
+                    (_) => _refreshDrawer(),
+                  ); // Refresh header when returning
+                },
+              ),
+
               ListTile(
                 leading: const Icon(Icons.history, color: Colors.black87),
                 title: const Text('History'),
@@ -341,7 +320,7 @@ class _HomeScreenState extends State<HomeScreen>
                     MaterialPageRoute(
                       builder: (context) => const HistoryScreen(),
                     ),
-                  );
+                  ).then((_) => _initPrefs());
                 },
               ),
               ListTile(
@@ -354,12 +333,10 @@ class _HomeScreenState extends State<HomeScreen>
                     MaterialPageRoute(
                       builder: (context) => const SettingsScreen(),
                     ),
-                  );
+                  ).then((_) => _initPrefs());
                 },
               ),
-              
-              const Divider(), // A thin line separator
-
+              const Divider(),
               ListTile(
                 leading: const Icon(
                   Icons.delete_forever,
@@ -367,7 +344,7 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 title: const Text('Reset Everything'),
                 onTap: () async {
-                  Navigator.pop(context); // Close drawer first
+                  Navigator.pop(context);
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
@@ -390,9 +367,7 @@ class _HomeScreenState extends State<HomeScreen>
                       ],
                     ),
                   );
-                  if (confirm == true) {
-                    await _resetCounts(resetMala: true);
-                  }
+                  if (confirm == true) await _resetCounts(resetMala: true);
                 },
               ),
             ],
@@ -400,13 +375,33 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       ),
       appBar: AppBar(
-        title: Text(
-          'Smaran',
-          style: GoogleFonts.eagleLake(
-            fontWeight: FontWeight.bold,
-            color: const Color.fromARGB(239, 243, 242, 242),
-          ),
+        title: Column(
+          mainAxisSize:
+              MainAxisSize.min, // 1. Hugs the text vertically (doesn't stretch)
+          crossAxisAlignment:
+              CrossAxisAlignment.center, // 2. Forces children to be centered
+
+          children: [
+            Text(
+              'Smaran',
+              style: GoogleFonts.eagleLake(
+                fontWeight: FontWeight.bold,
+                color: const Color.fromARGB(239, 243, 242, 242),
+              ),
+            ),
+            // The tiny subtitle showing "4 / 16"
+            Text(
+              "   $_malaCount / $_targetSankalpa 📿",
+              style: GoogleFonts.lato(
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                color: const Color.fromARGB(180, 255, 255, 255),
+                letterSpacing: 1.2,
+              ),
+            ),
+          ],
         ),
+
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -416,27 +411,16 @@ class _HomeScreenState extends State<HomeScreen>
             child: Container(color: Colors.white.withValues(alpha: 0.03)),
           ),
         ),
+
+        // ...existing code...
         actions: [
           AnimatedBuilder(
             animation: _shakeAnim,
             builder: (context, child) {
-              final dx =
-                  math.sin(_shakeAnim.value * math.pi * 8) * 6; // small wiggle
+              final dx = math.sin(_shakeAnim.value * math.pi * 8) * 6;
               return Transform.translate(offset: Offset(dx, 0), child: child);
             },
-            child: IconButton(
-              // Short Press: reset beads + warn that long-press clears all
-              onPressed: () async {
-                await _resetCounts(resetMala: false);
-                await _triggerShakeHint();
-              },
-              icon: const Icon(
-                Icons.refresh,
-                color: Color.fromARGB(239, 243, 242, 242),
-              ),
-              tooltip:
-                  'Tap: reset round. Long-press: reset round + total malas.',
-              // Long Press: clear everything
+            child: GestureDetector(
               onLongPress: () async {
                 final confirm = await showDialog<bool>(
                   context: context,
@@ -464,157 +448,404 @@ class _HomeScreenState extends State<HomeScreen>
                   await _resetCounts(resetMala: true);
                 }
               },
+              child: IconButton(
+                onPressed: () async {
+                  await _resetCounts(resetMala: false);
+                  if (_shakeCtrl.isAnimating) return;
+                  _shakeCtrl.forward(from: 0);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Long press to Reset all Malas! 📿'),
+                      duration: Duration(seconds: 1),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+                icon: const Icon(
+                  Icons.refresh,
+                  color: Color.fromARGB(239, 243, 242, 242),
+                ),
+              ),
             ),
           ),
         ],
+
+        // ...existing code...
       ),
+      // Replace the entire body: GestureDetector(...) block with this:
       body: GestureDetector(
         onTap: () => _incrementCounter(),
-        child: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/images/background.jpeg'),
-              fit: BoxFit.cover,
-              opacity: _isFocusModeOn ? 1.0 : 0.92,
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              if (!_isFocusModeOn) ...[
-                const SizedBox(height: 200), // Push everything down from top
-                // const Spacer(flex: 1),
-                // Glass Box
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(50),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 22,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color.fromARGB(
-                          56,
-                          255,
-                          255,
-                          255,
-                        ), // <--- Use the constant
-                        borderRadius: BorderRadius.circular(
-                          50,
-                        ), // <--- Match the 50 from above
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
-                          width: 1.5,
-                        ), // <--- ADD Border
-                        boxShadow: [
-                          // <--- ADD Shadow for depth
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            "Malas Completed: ",
-                            style: GoogleFonts.rubik(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          Text(
-                            "$_malaCount",
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: kSaffron,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+        child: Stack(
+          children: [
+            // --- LAYER 1: Background Image ---
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: const AssetImage('assets/images/background.jpeg'),
+                  fit: BoxFit.cover,
+                  opacity: _isFocusModeOn ? 1.0 : 0.92,
                 ),
-                const SizedBox(height: 40),
+              ),
+            ),
 
-                // Circle Progress
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 300,
-                      height: 300,
-                      child: CircularProgressIndicator(
-                        // Uses the constant now!
-                        value: _counter / _roundSize,
-                        backgroundColor: Colors.white.withValues(alpha: 0.3),
-                        color: kSaffron,
-                        strokeWidth: 20,
-                        strokeCap: StrokeCap.round,
-                      ),
-                    ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '$_counter',
-                          style: const TextStyle(
-                            fontSize: 90,
-                            fontWeight: FontWeight.w600,
-                            color: kSaffron,
+            // --- LAYER 2: The Vignette (Subtle Dark Edges) ---
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  colors: [
+                    Colors.transparent, // Center: Show the image clearly
+                    Colors.black.withValues(alpha: 0.4), // Edges: Darken nicely
+                  ],
+                  center: Alignment.center,
+                  radius:
+                      1.1, // How wide the clear spot is (1.1 reaches corners)
+                  stops: const [0.5, 1.0], // Start darkening halfway out
+                ),
+              ),
+            ),
+
+            // --- LAYER 3: The UI Content (Circle, Text, Buttons) ---
+            SizedBox(
+              width: double.infinity,
+              height: double.infinity,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (!_isFocusModeOn) ...[
+                    const Spacer(flex: 2),
+                    // Malas Completed Box
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(50),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 22,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color.fromARGB(56, 255, 255, 255),
+                            borderRadius: BorderRadius.circular(50),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.3),
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                blurRadius: 20,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                "Malas Completed: ",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                "$_malaCount",
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color.fromARGB(239, 243, 242, 242),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Text(
-                          '/ $_roundSize', // Uses the constant
-                          style: TextStyle(
-                            fontSize: 24,
-                            color: const Color.fromARGB(192, 255, 255, 255),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    // The Progress Circle
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 300,
+                          height: 300,
+                          child: CircularProgressIndicator(
+                            value: _counter / _roundSize,
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.3,
+                            ),
+                            color: kSaffron,
+                            strokeWidth: 20,
+                            strokeCap: StrokeCap.round,
                           ),
+                        ),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '$_counter',
+                              style: const TextStyle(
+                                fontSize: 90,
+                                fontWeight: FontWeight.w600,
+                                color: kSaffron,
+                              ),
+                            ),
+                            const Text(
+                              '/ 108',
+                              style: TextStyle(
+                                fontSize: 24,
+                                color: Color.fromARGB(192, 255, 255, 255),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
+                    const Spacer(flex: 2),
+                  ] else ...[
+                    const Spacer(),
                   ],
-                ),
-                const SizedBox(height: 50),
-              ] else ...[
-                // Focus Mode: Push everything to bottom
-                const Spacer(),
-              ],
-
-              // Undo Buttonn --> Always Visible!
-              TextButton.icon(
-                onPressed: () => _decrementCounter(),
-                icon: const Icon(
-                  Icons.undo,
-                  color: Color.fromARGB(210, 0, 0, 0),
-                ),
-                label: Text(
-                  "Undo Last Bead",
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600,
-                    color: Color.fromARGB(210, 0, 0, 0),
-                    fontSize: 14,
+                  // Undo Button
+                  TextButton.icon(
+                    onPressed: () => _decrementCounter(),
+                    icon: const Icon(
+                      Icons.undo,
+                      color: Color.fromARGB(210, 255, 255, 255),
+                    ),
+                    label: Text(
+                      "Undo Last Bead",
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        color: const Color.fromARGB(210, 255, 255, 255),
+                        fontSize: 14,
+                      ),
+                    ),
                   ),
-                ),
+                  if (_isFocusModeOn) const SizedBox(height: 50),
+                  if (!_isFocusModeOn) const SizedBox(height: 30),
+                ],
               ),
-              // Add some bottom padding in Focus Mode
-              if (_isFocusModeOn) const SizedBox(height: 50),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-// --- NEW HISTORY SCREEN CLASS ---
+// --- NEW MANTRA LIBRARY SCREEN ---
+class MantraScreen extends StatefulWidget {
+  const MantraScreen({super.key});
+
+  @override
+  State<MantraScreen> createState() => _MantraScreenState();
+}
+
+class _MantraScreenState extends State<MantraScreen> {
+  List<String> _mantraList = [];
+  String _activeMantra = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMantras();
+  }
+
+  Future<void> _loadMantras() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _mantraList =
+          prefs.getStringList('saved_mantras') ??
+          [
+            "Hare Krishna Hare Krishna\nKrishna Krishna Hare Hare\nHare Rama Hare Rama\nRama Rama Hare Hare",
+            "Jaya Sri Krishna Caitanya\nPrabhu Nityananda\nSri Advaita Gadadhara\nSrivasadi Gaura Bhakta Vrinda",
+            "Om Namo Bhagavate Vasudevaya",
+          ];
+      _activeMantra = prefs.getString('active_mantra') ?? "Hare Krishna";
+    });
+  }
+
+  // --- UPDATED: Shows Popup instead of SnackBar ---
+  Future<void> _setActiveMantra(String mantra) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('active_mantra', mantra);
+    setState(() {
+      _activeMantra = mantra;
+    });
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Updated"),
+        content: const Text("Mantra is now displayed on the Drawer"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("OK", style: TextStyle(color: kSaffron)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddDialog() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Add New Mantra"),
+        content: TextField(
+          controller: controller,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: "Enter mantra text here...",
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (controller.text.isNotEmpty) {
+                setState(() => _mantraList.add(controller.text));
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setStringList('saved_mantras', _mantraList);
+                Navigator.pop(ctx);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: kSaffron,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text("Add"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Mantra Library"),
+        backgroundColor: Colors.orange[50],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddDialog,
+        backgroundColor: kSaffron,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+      body: _mantraList.isEmpty
+          ? const Center(
+              child: Text(
+                'No mantras yet.\nTap + to add one!',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _mantraList.length,
+              itemBuilder: (context, index) {
+                final mantra = _mantraList[index];
+                final isActive = mantra == _activeMantra;
+                return Card(
+                  elevation: isActive ? 4 : 1,
+                  shape: RoundedRectangleBorder(
+                    side: isActive
+                        ? const BorderSide(color: kSaffron, width: 2)
+                        : BorderSide.none,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: InkWell(
+                    onTap: () => _setActiveMantra(mantra),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isActive
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_unchecked,
+                            color: isActive ? kSaffron : Colors.grey,
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              mantra,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: isActive
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                          if (!isActive)
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.grey,
+                              ),
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Delete Mantra?'),
+                                    content: const Text(
+                                      'This cannot be undone.',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, true),
+                                        child: const Text(
+                                          'Delete',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true) {
+                                  setState(() => _mantraList.removeAt(index));
+                                  final prefs =
+                                      await SharedPreferences.getInstance();
+                                  await prefs.setStringList(
+                                    'saved_mantras',
+                                    _mantraList,
+                                  );
+                                }
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+// --- HISTORY SCREEN ---
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
@@ -625,7 +856,7 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   List<String> _pastHistory = [];
   int _todayMalaCount = 0;
-  String _lastActiveTime = "--:--"; // <--- New Variable
+  String _lastActiveTime = "--:--";
 
   @override
   void initState() {
@@ -686,7 +917,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
       body: ListView.builder(
         itemCount: _pastHistory.length + 1,
         itemBuilder: (context, index) {
-          // --- TODAY'S ROW ---
           if (index == 0) {
             return Card(
               color: Colors.orange[50],
@@ -708,23 +938,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
             );
           }
-
-          // --- HISTORY ROWS ---
           final historyIndex = index - 1;
           final rawString = _pastHistory[historyIndex];
           final parts = rawString.split('|');
-
-          // Safety Check: Handle old data format vs new format
           String date = parts[0].trim();
           String time = "";
           String count = "";
 
           if (parts.length >= 3) {
-            // New Format: Date | Time | Count
             time = parts[1].trim();
             count = parts[2].trim();
           } else if (parts.length == 2) {
-            // Old Format: Date | Count (Backward compatibility)
             time = "Unknown";
             count = parts[1].trim();
           }
@@ -739,10 +963,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
               children: [
                 Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
                 const SizedBox(width: 4),
-                Text("$time  •  ", style: TextStyle(color: Colors.grey[800])),
-                Text(
-                  count,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                Flexible(
+                  child: Text(
+                    "$time  •  $count",
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.grey[800],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -753,7 +982,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 }
 
-// --- Settings Class --
+// --- SETTINGS SCREEN ---
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -762,7 +991,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  // 1. Variables with Defaults
   bool _isVibrationOn = true;
   bool _isSoundOn = true;
   double _targetRounds = 16;
@@ -770,10 +998,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSettings(); // <--- Load saved settings when screen opens
+    _loadSettings();
   }
 
-  // 2. Load Data Function
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -783,7 +1010,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  // 3. Save Data Function (Updates instantly)
   Future<void> _updateSetting(String key, dynamic value) async {
     final prefs = await SharedPreferences.getInstance();
     if (value is bool) {
@@ -806,10 +1032,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             secondary: const Icon(Icons.vibration),
             title: const Text("Haptic Feedback"),
             value: _isVibrationOn,
-            activeColor: Colors.deepOrange,
+            activeThumbColor: Colors.deepOrange,
             onChanged: (val) {
               setState(() => _isVibrationOn = val);
-              _updateSetting('isVibrationOn', val); // <--- SAVES TO MEMORY
+              _updateSetting('isVibrationOn', val);
             },
           ),
           SwitchListTile(
@@ -819,25 +1045,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
             activeColor: Colors.deepOrange,
             onChanged: (val) {
               setState(() => _isSoundOn = val);
-              _updateSetting('isSoundOn', val); // <--- SAVES TO MEMORY
+              _updateSetting('isSoundOn', val);
             },
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.flag),
-            title: const Text("Daily Target"),
+            title: const Text("Daily Sankalpa"),
             subtitle: Text("Goal: ${_targetRounds.round()} Rounds"),
-          ),
-          Slider(
-            value: _targetRounds,
-            min: 1,
-            max: 64,
-            divisions: 63,
-            activeColor: Colors.deepOrange,
-            label: _targetRounds.round().toString(),
-            onChanged: (val) {
-              setState(() => _targetRounds = val);
-              _updateSetting('targetRounds', val); // <--- SAVES TO MEMORY
+            trailing: const Icon(Icons.edit, color: Colors.grey),
+            onTap: () async {
+              final controller = TextEditingController(
+                text: _targetRounds.round().toString(),
+              );
+              final result = await showDialog<int>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Set Daily Sankalpa'),
+                  content: TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter number of rounds',
+                      suffixText: 'rounds',
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        final value = int.tryParse(controller.text);
+                        if (value != null && value > 0) {
+                          Navigator.pop(ctx, value);
+                        }
+                      },
+                      child: const Text('Save'),
+                    ),
+                  ],
+                ),
+              );
+              if (result != null) {
+                setState(() => _targetRounds = result.toDouble());
+                _updateSetting('targetRounds', result.toDouble());
+              }
             },
           ),
         ],
