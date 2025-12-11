@@ -66,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen>
   // --- 2. VARIABLES ---
   int _counter = 0;
   int _malaCount = 0;
+  bool _isFocusModeOn = false;
 
   // Cache the preferences so we don't look them up every time
   SharedPreferences? _prefs;
@@ -142,6 +143,7 @@ class _HomeScreenState extends State<HomeScreen>
     setState(() {
       _counter = savedCounter;
       _malaCount = savedMala;
+      _isFocusModeOn = _prefs?.getBool('isFocusModeOn') ?? false;
     });
 
     // 5. Ensure we mark today as active immediately
@@ -314,6 +316,21 @@ class _HomeScreenState extends State<HomeScreen>
               ),
 
               // 2. Menu Items
+              SwitchListTile(
+                secondary: Icon(
+                  _isFocusModeOn ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.deepOrange,
+                ),
+                title: const Text('Focus Mode'),
+                subtitle: const Text('Hide counter for deeper meditation'),
+                value: _isFocusModeOn,
+                activeThumbColor: Colors.deepOrange,
+                onChanged: (val) async {
+                  setState(() => _isFocusModeOn = val);
+                  await _prefs?.setBool('isFocusModeOn', val);
+                  Navigator.pop(context); // Close drawer after toggle
+                },
+              ),
               ListTile(
                 leading: const Icon(Icons.history, color: Colors.black87),
                 title: const Text('History'),
@@ -340,6 +357,7 @@ class _HomeScreenState extends State<HomeScreen>
                   );
                 },
               ),
+              
               const Divider(), // A thin line separator
 
               ListTile(
@@ -459,113 +477,118 @@ class _HomeScreenState extends State<HomeScreen>
             image: DecorationImage(
               image: AssetImage('assets/images/background.jpeg'),
               fit: BoxFit.cover,
-              opacity: 0.92,
+              opacity: _isFocusModeOn ? 1.0 : 0.92,
             ),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              const SizedBox(height: 200), // Push everything down from top
-              // const Spacer(flex: 1),
-              // Glass Box
-              ClipRRect(
-                borderRadius: BorderRadius.circular(50),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 22,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color.fromARGB(
-                        56,
-                        255,
-                        255,
-                        255,
-                      ), // <--- Use the constant
-                      borderRadius: BorderRadius.circular(
-                        50,
-                      ), // <--- Match the 50 from above
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3),
-                        width: 1.5,
-                      ), // <--- ADD Border
-                      boxShadow: [
-                        // <--- ADD Shadow for depth
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
-                          blurRadius: 20,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          "Malas Completed: ",
-                          style: GoogleFonts.rubik(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
+              if (!_isFocusModeOn) ...[
+                const SizedBox(height: 200), // Push everything down from top
+                // const Spacer(flex: 1),
+                // Glass Box
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(50),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 22,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color.fromARGB(
+                          56,
+                          255,
+                          255,
+                          255,
+                        ), // <--- Use the constant
+                        borderRadius: BorderRadius.circular(
+                          50,
+                        ), // <--- Match the 50 from above
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          width: 1.5,
+                        ), // <--- ADD Border
+                        boxShadow: [
+                          // <--- ADD Shadow for depth
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 20,
+                            spreadRadius: 2,
                           ),
-                        ),
-                        Text(
-                          "$_malaCount",
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: kSaffron,
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            "Malas Completed: ",
+                            style: GoogleFonts.rubik(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                      ],
+                          Text(
+                            "$_malaCount",
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: kSaffron,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 40),
+                const SizedBox(height: 40),
 
-              // Circle Progress
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    width: 300,
-                    height: 300,
-                    child: CircularProgressIndicator(
-                      // Uses the constant now!
-                      value: _counter / _roundSize,
-                      backgroundColor: Colors.white.withValues(alpha: 0.3),
-                      color: kSaffron,
-                      strokeWidth: 20,
-                      strokeCap: StrokeCap.round,
+                // Circle Progress
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 300,
+                      height: 300,
+                      child: CircularProgressIndicator(
+                        // Uses the constant now!
+                        value: _counter / _roundSize,
+                        backgroundColor: Colors.white.withValues(alpha: 0.3),
+                        color: kSaffron,
+                        strokeWidth: 20,
+                        strokeCap: StrokeCap.round,
+                      ),
                     ),
-                  ),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        '$_counter',
-                        style: const TextStyle(
-                          fontSize: 90,
-                          fontWeight: FontWeight.w600,
-                          color: kSaffron,
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '$_counter',
+                          style: const TextStyle(
+                            fontSize: 90,
+                            fontWeight: FontWeight.w600,
+                            color: kSaffron,
+                          ),
                         ),
-                      ),
-                      Text(
-                        '/ $_roundSize', // Uses the constant
-                        style: TextStyle(
-                          fontSize: 24,
-                          color: const Color.fromARGB(192, 255, 255, 255),
+                        Text(
+                          '/ $_roundSize', // Uses the constant
+                          style: TextStyle(
+                            fontSize: 24,
+                            color: const Color.fromARGB(192, 255, 255, 255),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 50),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 50),
+              ] else ...[
+                // Focus Mode: Push everything to bottom
+                const Spacer(),
+              ],
 
-              // Undo Button
+              // Undo Buttonn --> Always Visible!
               TextButton.icon(
                 onPressed: () => _decrementCounter(),
                 icon: const Icon(
@@ -581,6 +604,8 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
               ),
+              // Add some bottom padding in Focus Mode
+              if (_isFocusModeOn) const SizedBox(height: 50),
             ],
           ),
         ),
