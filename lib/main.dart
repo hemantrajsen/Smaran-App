@@ -1041,83 +1041,111 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text("Settings"),
         backgroundColor: Colors.orange[50],
       ),
-      body: ListView(
+      // CHANGE 1: Main body is now a Column to separate List and Footer
+      body: Column(
         children: [
-          SwitchListTile(
-            secondary: const Icon(Icons.vibration),
-            title: const Text("Haptic Feedback"),
-            value: _isVibrationOn,
-            activeThumbColor: Colors.deepOrange,
-            onChanged: (val) {
-              setState(() => _isVibrationOn = val);
-              _updateSetting('isVibrationOn', val);
-            },
-          ),
-          SwitchListTile(
-            secondary: const Icon(Icons.volume_up),
-            title: const Text("Chant Sound"),
-            value: _isSoundOn,
-            activeThumbColor: Colors.deepOrange,
-            onChanged: (val) {
-              setState(() => _isSoundOn = val);
-              _updateSetting('isSoundOn', val);
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.flag),
-            title: const Text("Daily Sankalpa"),
-            subtitle: Text("Goal: ${_targetRounds.round()} Rounds"),
-            trailing: const Icon(Icons.edit, color: Colors.grey),
-            onTap: () async {
-              final controller = TextEditingController(
-                text: _targetRounds.round().toString(),
-              );
-              final result = await showDialog<int>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Set Daily Sankalpa'),
-                  content: TextField(
-                    controller: controller,
-                    keyboardType: TextInputType.number,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter number of rounds',
-                      suffixText: 'rounds',
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        final value = int.tryParse(controller.text);
-                        if (value != null && value > 0) {
-                          Navigator.pop(ctx, value);
-                        }
-                      },
-                      child: const Text('Save'),
-                    ),
-                  ],
+          // CHANGE 2: The List is wrapped in Expanded to push the footer down
+          Expanded(
+            child: ListView(
+              children: [
+                SwitchListTile(
+                  secondary: const Icon(Icons.vibration),
+                  title: const Text("Haptic Feedback"),
+                  value: _isVibrationOn,
+                  activeThumbColor: Colors.deepOrange,
+                  onChanged: (val) {
+                    setState(() => _isVibrationOn = val);
+                    _updateSetting('isVibrationOn', val);
+                  },
                 ),
-              );
-              if (result != null) {
-                setState(() => _targetRounds = result.toDouble());
-                _updateSetting('targetRounds', result.toDouble());
-              }
-            },
-          ),
-          const SizedBox(height: 20), // Spacing
-          // THE VERSION ROW
-          Center(
-            child: Text(
-              _appVersion,
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
+                SwitchListTile(
+                  secondary: const Icon(Icons.volume_up),
+                  title: const Text("Chant Sound"),
+                  value: _isSoundOn,
+                  activeThumbColor: Colors.deepOrange,
+                  onChanged: (val) {
+                    setState(() => _isSoundOn = val);
+                    _updateSetting('isSoundOn', val);
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.flag),
+                  title: const Text("Daily Sankalpa"),
+                  subtitle: Text("Goal: ${_targetRounds.round()} Rounds"),
+                  trailing: const Icon(Icons.edit, color: Colors.grey),
+                  onTap: () async {
+                    final controller = TextEditingController(
+                      text: _targetRounds.round().toString(),
+                    );
+                    final result = await showDialog<int>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Set Daily Sankalpa'),
+                        content: TextField(
+                          controller: controller,
+                          keyboardType: TextInputType.number,
+                          autofocus: true,
+                          decoration: const InputDecoration(
+                            hintText: ' ',
+                            suffixText: 'rounds',
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              final value = int.tryParse(controller.text);
+                              if (value != null && value > 0) {
+                                Navigator.pop(ctx, value);
+                              }
+                            },
+                            child: const Text('Save'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (result != null) {
+                      setState(() => _targetRounds = result.toDouble());
+                      _updateSetting('targetRounds', result.toDouble());
+                    }
+                  },
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 20),
+
+          // CHANGE 3: The Signature Block is now outside the ListView
+          // This keeps it pinned to the bottom.
+          Container(
+            padding: const EdgeInsets.only(bottom: 30, top: 10),
+            child: Column(
+              children: [
+                const Text(
+                  "Crafted with ❤️ and Devotion by",
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                // Your Name in Cursive
+                Text(
+                  "Hemant Raj Sen",
+                  style: GoogleFonts.comforter(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: kSaffron, // Using your Saffron constant
+                  ),
+                ),
+                const SizedBox(height: 2),
+                // The Version Number
+                Text(
+                  _appVersion,
+                  style: const TextStyle(color: Colors.grey, fontSize: 10),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
