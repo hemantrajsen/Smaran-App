@@ -1,4 +1,5 @@
 // --- IMPORTS ---
+import 'dart:async';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +13,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 const Color kSaffron = Color(0xFFFF9933);
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized(); // These are to lock the screen in portrait mode before the app starts
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const SmaranApp());
 }
 
@@ -73,13 +76,14 @@ class _HomeScreenState extends State<HomeScreen>
     super.initState();
     _initPrefs();
     // Preload audio for instant playback
+    _audioPlayer.setReleaseMode(ReleaseMode.stop);
     _audioPlayer.setSource(AssetSource('audio/bell.mp3'));
   }
 
   @override
   void dispose() {
-    _shakeCtrl.dispose();
-    _audioPlayer.dispose();
+    _shakeCtrl.dispose(); // <-- Cleans up the Animation
+    _audioPlayer.dispose(); // <--- Cleans up audio
     super.dispose();
   }
 
@@ -101,6 +105,9 @@ class _HomeScreenState extends State<HomeScreen>
         0,
         "$lastDate | $lastTime | $savedMala Malas (Auto-Saved)",
       );
+      if (history.length > 120) {
+        history = history.sublist(0, 120);
+      }
       await _prefs?.setStringList('history_log', history);
       savedCounter = 0;
       savedMala = 0;
@@ -160,8 +167,9 @@ class _HomeScreenState extends State<HomeScreen>
         if (vibe) HapticFeedback.heavyImpact();
         if (sound) {
           try {
-            await _audioPlayer.stop();
-            await _audioPlayer.play(AssetSource('audio/bell.mp3'));
+            await _audioPlayer
+                .stop(); // Optional safety: ensures it starts from 0 if it was stuck
+            await _audioPlayer.resume();
           } catch (e) {
             debugPrint('Audio error: $e');
           }
