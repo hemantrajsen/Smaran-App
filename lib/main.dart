@@ -1019,7 +1019,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadAppVersion() async {
     final PackageInfo info = await PackageInfo.fromPlatform();
     setState(() {
-      // This creates "Version 1.0.0 (Build 1)"
       _appVersion = "Version ${info.version} (${info.buildNumber})";
     });
   }
@@ -1140,7 +1139,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Text(
                   "Hemant Raj Sen",
                   style: GoogleFonts.comforter(
-                    fontSize: 26,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: kSaffron, // Using your Saffron constant
                   ),
