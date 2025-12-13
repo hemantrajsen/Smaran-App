@@ -1,5 +1,5 @@
 name: smaran
-description: "A new Flutter project."
+description: "An App for chanting and meditation for focus"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.4.3+1
+version: 2.5.3+1
 
 environment:
   sdk: ^3.10.3
@@ -97,15 +97,20 @@ flutter:
   # see https://flutter.dev/to/font-from-package
 
 flutter_launcher_icons:
-  android: "launcher_icon"
+  android: "ic_launcher"
   ios: true
-  image_path: "assets/images/icon.png"  # <--- Make sure this matches your filename!
-  min_sdk_android: 21 # Support modern Androids
+  image_path: "assets/images/icon.png"
+  min_sdk_android: 21
+  # Adaptive icon for Android 8+ (API 26+) - REQUIRED for modern Android phones
+  adaptive_icon_background: "#6F0000"  # Use your brand color or an image path
+  adaptive_icon_foreground: "assets/images/icon.png"
+  # Remove alpha channel for Play Store compatibility
+  remove_alpha_ios: true
 
 flutter_native_splash:
-  color: "#f9f6ec" # Background color (Warm Off-White)
-  image: "assets/images/icon.png" # The logo in the center
-  #branding: "assets/images/icon.png" # Optional: Keeps branding on Android 12+
+  color: "#6F0000" 
+  image: "assets/images/splash_icon.png"  # Smaller centered icon for splash
+  #branding: "assets/images/icon.png" 
   android_12:
-    image: "assets/images/icon.png"
-    color: "#f9f6ec"
+    image: "assets/images/splash_icon.png"
+    color: "#6F0000"
