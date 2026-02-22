@@ -56,6 +56,8 @@ class _HomeScreenState extends State<HomeScreen>
   int _counter = 0;
   int _malaCount = 0;
   bool _isFocusModeOn = false;
+  int _ltcount = 0;
+  int _ltBeadCount = 0;
 
   // The Active Mantra to display in the header
   String _drawerMantra = "Hare Krishna";
@@ -94,6 +96,12 @@ class _HomeScreenState extends State<HomeScreen>
     // Load Counter Data
     int savedCounter = _prefs?.getInt('counter') ?? 0;
     int savedMala = _prefs?.getInt('mala_count') ?? 0;
+    int savedLifetimeMala = _prefs?.getInt('lifetime_mala_count') ?? 0;
+    final hasLifetimeBeads =
+        _prefs?.containsKey('lifetime_bead_count') ?? false;
+    final savedLifetimeBeads = hasLifetimeBeads
+        ? (_prefs?.getInt('lifetime_bead_count') ?? 0)
+        : (savedLifetimeMala * _roundSize + savedCounter);
     String? lastDate = _prefs?.getString('last_active_date');
     String today = DateTime.now().toString().split(' ')[0];
 
@@ -123,6 +131,8 @@ class _HomeScreenState extends State<HomeScreen>
     setState(() {
       _counter = savedCounter;
       _malaCount = savedMala;
+      _ltcount = savedLifetimeMala;
+      _ltBeadCount = savedLifetimeBeads;
       _isFocusModeOn = _prefs?.getBool('isFocusModeOn') ?? false;
       // Load the active mantra from storage
       _drawerMantra = _prefs?.getString('active_mantra') ?? "Hare Krishna";
@@ -152,6 +162,8 @@ class _HomeScreenState extends State<HomeScreen>
     await Future.wait([
       prefs.setInt('counter', _counter),
       prefs.setInt('mala_count', _malaCount),
+      prefs.setInt('lifetime_mala_count', _ltcount),
+      prefs.setInt('lifetime_bead_count', _ltBeadCount),
       prefs.setString('last_active_date', today),
       prefs.setString('last_active_time', time),
     ]);
@@ -159,9 +171,15 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _incrementCounter() async {
     if (_counter < _roundSize) {
-      setState(() => _counter++);
+      setState(() {
+        _counter++;
+        _ltBeadCount++;
+      });
       if (_counter == _roundSize) {
-        setState(() => _malaCount++);
+        setState(() {
+          _malaCount++;
+          _ltcount++;
+        });
         bool vibe = _prefs?.getBool('isVibrationOn') ?? true;
         bool sound = _prefs?.getBool('isSoundOn') ?? true;
         if (vibe) HapticFeedback.heavyImpact();
@@ -179,7 +197,10 @@ class _HomeScreenState extends State<HomeScreen>
         if (vibe) HapticFeedback.lightImpact();
       }
     } else {
-      setState(() => _counter = 1);
+      setState(() {
+        _counter = 1;
+        _ltBeadCount++;
+      });
       bool vibe = _prefs?.getBool('isVibrationOn') ?? true;
       if (vibe) HapticFeedback.lightImpact();
     }
@@ -188,7 +209,10 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _decrementCounter() async {
     if (_counter == 0) return;
-    setState(() => _counter--);
+    setState(() {
+      _counter--;
+      if (_ltBeadCount > 0) _ltBeadCount--;
+    });
     bool vibe = _prefs?.getBool('isVibrationOn') ?? true;
     if (vibe) HapticFeedback.lightImpact();
     await _saveData();
@@ -277,6 +301,62 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                       ],
                     ),
+                  ),
+                ),
+              ),
+
+              // Malas Completed and Count area
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12.0),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Malas Count: ',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.eagleLake(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        "Today's count: $_counter",
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color.fromARGB(192, 76, 76, 76),
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '108 x $_malaCount',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color.fromARGB(192, 76, 76, 76),
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Lifetime: $_ltcount',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color.fromARGB(192, 76, 76, 76),
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Lifetime beads: $_ltBeadCount',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color.fromARGB(192, 76, 76, 76),
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
