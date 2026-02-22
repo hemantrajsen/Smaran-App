@@ -96,12 +96,6 @@ class _HomeScreenState extends State<HomeScreen>
     // Load Counter Data
     int savedCounter = _prefs?.getInt('counter') ?? 0;
     int savedMala = _prefs?.getInt('mala_count') ?? 0;
-    int savedLifetimeMala = _prefs?.getInt('lifetime_mala_count') ?? 0;
-    final hasLifetimeBeads =
-        _prefs?.containsKey('lifetime_bead_count') ?? false;
-    final savedLifetimeBeads = hasLifetimeBeads
-        ? (_prefs?.getInt('lifetime_bead_count') ?? 0)
-        : (savedLifetimeMala * _roundSize + savedCounter);
     String? lastDate = _prefs?.getString('last_active_date');
     String today = DateTime.now().toString().split(' ')[0];
 
@@ -127,6 +121,34 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       );
     }
+
+    // One-time migration for lifetime counters for users upgrading from older
+    // versions (where these keys did not exist).
+    final prefs = _prefs;
+    final hasLifetimeMala = prefs?.containsKey('lifetime_mala_count') ?? false;
+    final hasLifetimeBeads = prefs?.containsKey('lifetime_bead_count') ?? false;
+
+    // Sum malas from history entries like: "YYYY-MM-DD | HH:MM | 3 Malas ..."
+    final history = prefs?.getStringList('history_log') ?? [];
+    final malaRegex = RegExp(r'\|\s*(\d+)\s*Malas\b');
+    final historyMalaTotal = history.fold<int>(0, (sum, entry) {
+      final match = malaRegex.firstMatch(entry);
+      if (match == null) return sum;
+      return sum + (int.tryParse(match.group(1) ?? '') ?? 0);
+    });
+
+    final migratedLifetimeMala = historyMalaTotal + savedMala;
+    final savedLifetimeMala = hasLifetimeMala
+        ? (prefs?.getInt('lifetime_mala_count') ?? migratedLifetimeMala)
+        : migratedLifetimeMala;
+
+    // If counter is exactly 108, it's not "in-progress" beads.
+    final beadsInCurrentMala = savedCounter == _roundSize ? 0 : savedCounter;
+    final migratedLifetimeBeads =
+        savedLifetimeMala * _roundSize + beadsInCurrentMala;
+    final savedLifetimeBeads = hasLifetimeBeads
+        ? (prefs?.getInt('lifetime_bead_count') ?? migratedLifetimeBeads)
+        : migratedLifetimeBeads;
 
     setState(() {
       _counter = savedCounter;
@@ -243,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen>
       extendBodyBehindAppBar: true,
       drawer: Drawer(
         child: Container(
-          color: Colors.white,
+          color: Color.fromRGBO(255, 250, 240, 1),
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
