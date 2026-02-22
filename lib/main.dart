@@ -495,7 +495,7 @@ class _HomeScreenState extends State<HomeScreen>
               height: double.infinity,
               decoration: BoxDecoration(
                 image: DecorationImage(
-                  image: const AssetImage('assets/images/background.jpeg'),
+                  image: const AssetImage('assets/images/background.png'),
                   fit: BoxFit.cover,
                   opacity: _isFocusModeOn ? 1.0 : 0.92,
                 ),
@@ -530,65 +530,65 @@ class _HomeScreenState extends State<HomeScreen>
                   if (!_isFocusModeOn) ...[
                     const Spacer(flex: 2),
                     // Malas Completed Box
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(50),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 22,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color.fromARGB(56, 255, 255, 255),
-                            borderRadius: BorderRadius.circular(50),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.3),
-                              width: 1.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.3),
-                                blurRadius: 20,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                "Malas Completed: ",
-                                style: GoogleFonts.poppins(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Text(
-                                "$_malaCount",
-                                style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color.fromARGB(239, 243, 242, 242),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                    // ClipRRect(
+                    //   borderRadius: BorderRadius.circular(50),
+                    //   child: BackdropFilter(
+                    //     filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                    //     child: Container(
+                    //       padding: const EdgeInsets.symmetric(
+                    //         horizontal: 22,
+                    //         vertical: 10,
+                    //       ),
+                    //       decoration: BoxDecoration(
+                    //         color: const Color.fromARGB(56, 255, 255, 255),
+                    //         borderRadius: BorderRadius.circular(50),
+                    //         border: Border.all(
+                    //           color: Colors.white.withValues(alpha: 0.3),
+                    //           width: 1.5,
+                    //         ),
+                    //         boxShadow: [
+                    //           BoxShadow(
+                    //             color: Colors.black.withValues(alpha: 0.3),
+                    //             blurRadius: 20,
+                    //             spreadRadius: 2,
+                    //           ),
+                    //         ],
+                    //       ),
+                    //       child: Row(
+                    //         mainAxisSize: MainAxisSize.min,
+                    //         children: [
+                    //           Text(
+                    //             "Malas Completed: ",
+                    //             style: GoogleFonts.poppins(
+                    //               fontSize: 18,
+                    //               fontWeight: FontWeight.w500,
+                    //             ),
+                    //           ),
+                    //           Text(
+                    //             "$_malaCount",
+                    //             style: const TextStyle(
+                    //               fontSize: 24,
+                    //               fontWeight: FontWeight.bold,
+                    //               color: Color.fromARGB(239, 243, 242, 242),
+                    //             ),
+                    //           ),
+                    //         ],
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
                     const SizedBox(height: 40),
                     // The Progress Circle
                     Stack(
                       alignment: Alignment.center,
                       children: [
                         SizedBox(
-                          width: 300,
-                          height: 300,
+                          width: 350,
+                          height: 350,
                           child: CircularProgressIndicator(
                             value: _counter / _roundSize,
                             backgroundColor: Colors.white.withValues(
-                              alpha: 0.3,
+                              alpha: 0.2,
                             ),
                             color: kSaffron,
                             strokeWidth: 20,
@@ -601,15 +601,15 @@ class _HomeScreenState extends State<HomeScreen>
                             Text(
                               '$_counter',
                               style: const TextStyle(
-                                fontSize: 90,
+                                fontSize: 100,
                                 fontWeight: FontWeight.w600,
-                                color: kSaffron,
+                                color: Color.fromARGB(222, 255, 255, 255),
                               ),
                             ),
                             const Text(
                               '/ 108',
                               style: TextStyle(
-                                fontSize: 24,
+                                fontSize: 28,
                                 color: Color.fromARGB(192, 255, 255, 255),
                               ),
                             ),

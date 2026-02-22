@@ -68,6 +68,8 @@ flutter:
     - assets/images/background.jpeg
     - assets/images/another.jpeg
     - assets/audio/bell.mp3
+    - assets/images/neemBead.png
+    - assets/images/background.png
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
