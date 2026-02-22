@@ -223,7 +223,6 @@ class _HomeScreenState extends State<HomeScreen>
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
-              // --- UPDATED DRAWER HEADER ---
               // Uses a Custom Container instead of UserAccountsDrawerHeader to utilize full space
               Container(
                 height: 240, // Taller to fit mantra
@@ -423,7 +422,6 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
 
-        // ...existing code...
         actions: [
           AnimatedBuilder(
             animation: _shakeAnim,
@@ -481,12 +479,11 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
         ],
-
-        // ...existing code...
       ),
-      // Replace the entire body: GestureDetector(...) block with this:
+
       body: GestureDetector(
-        onTap: () => _incrementCounter(),
+        behavior: HitTestBehavior.opaque,
+        onTap: _isFocusModeOn ? _incrementCounter : null,
         child: Stack(
           children: [
             // --- LAYER 1: Background Image ---
@@ -529,94 +526,63 @@ class _HomeScreenState extends State<HomeScreen>
                 children: [
                   if (!_isFocusModeOn) ...[
                     const Spacer(flex: 2),
-                    // Malas Completed Box
-                    // ClipRRect(
-                    //   borderRadius: BorderRadius.circular(50),
-                    //   child: BackdropFilter(
-                    //     filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
-                    //     child: Container(
-                    //       padding: const EdgeInsets.symmetric(
-                    //         horizontal: 22,
-                    //         vertical: 10,
-                    //       ),
-                    //       decoration: BoxDecoration(
-                    //         color: const Color.fromARGB(56, 255, 255, 255),
-                    //         borderRadius: BorderRadius.circular(50),
-                    //         border: Border.all(
-                    //           color: Colors.white.withValues(alpha: 0.3),
-                    //           width: 1.5,
-                    //         ),
-                    //         boxShadow: [
-                    //           BoxShadow(
-                    //             color: Colors.black.withValues(alpha: 0.3),
-                    //             blurRadius: 20,
-                    //             spreadRadius: 2,
-                    //           ),
-                    //         ],
-                    //       ),
-                    //       child: Row(
-                    //         mainAxisSize: MainAxisSize.min,
-                    //         children: [
-                    //           Text(
-                    //             "Malas Completed: ",
-                    //             style: GoogleFonts.poppins(
-                    //               fontSize: 18,
-                    //               fontWeight: FontWeight.w500,
-                    //             ),
-                    //           ),
-                    //           Text(
-                    //             "$_malaCount",
-                    //             style: const TextStyle(
-                    //               fontSize: 24,
-                    //               fontWeight: FontWeight.bold,
-                    //               color: Color.fromARGB(239, 243, 242, 242),
-                    //             ),
-                    //           ),
-                    //         ],
-                    //       ),
-                    //     ),
-                    //   ),
-                    // ),
                     const SizedBox(height: 40),
                     // The Progress Circle
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        SizedBox(
-                          width: 350,
-                          height: 350,
-                          child: CircularProgressIndicator(
-                            value: _counter / _roundSize,
-                            backgroundColor: Colors.white.withValues(
-                              alpha: 0.2,
-                            ),
-                            color: kSaffron,
-                            strokeWidth: 20,
-                            strokeCap: StrokeCap.round,
-                          ),
-                        ),
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                    SizedBox(
+                      width: 350,
+                      height: 350,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTapDown: (details) {
+                          final p = details.localPosition;
+                          const radius = 175.0;
+                          const center = Offset(radius, radius);
+
+                          if ((p - center).distance <= radius) {
+                            unawaited(_incrementCounter());
+                          }
+                        },
+                        child: Stack(
+                          alignment: Alignment.center,
                           children: [
-                            Text(
-                              '$_counter',
-                              style: const TextStyle(
-                                fontSize: 100,
-                                fontWeight: FontWeight.w600,
-                                color: Color.fromARGB(222, 255, 255, 255),
+                            SizedBox(
+                              width: 350,
+                              height: 350,
+                              child: CircularProgressIndicator(
+                                value: _counter / _roundSize,
+                                backgroundColor: Colors.white.withValues(
+                                  alpha: 0.2,
+                                ),
+                                color: kSaffron,
+                                strokeWidth: 20,
+                                strokeCap: StrokeCap.round,
                               ),
                             ),
-                            const Text(
-                              '/ 108',
-                              style: TextStyle(
-                                fontSize: 28,
-                                color: Color.fromARGB(192, 255, 255, 255),
-                              ),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  '$_counter',
+                                  style: const TextStyle(
+                                    fontSize: 100,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color.fromARGB(222, 255, 255, 255),
+                                  ),
+                                ),
+                                const Text(
+                                  '/ 108',
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    color: Color.fromARGB(192, 255, 255, 255),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
+
                     const Spacer(flex: 2),
                   ] else ...[
                     const Spacer(),
