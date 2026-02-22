@@ -1,7 +1,7 @@
 # 🕉️ Smaran - Digital Japa Counter App
 
 <div align="center">
-  <img src="assets/images/background.jpeg" height="300" width="20%">
+  <img src="assets/images/background.png" height="300" width="20%">
 </div>
 
 > *"Always chant and be happy."*
@@ -46,7 +46,7 @@
 |:---:|:---:|:---:|:---:|
 | Home Screen | Focus Mode | Mantra Library | Drawer Menu |
 |:---:|:---:|:---:|:---:|
-| <img src="assets/screenshots/home.png" width="200"> | <img src="assets/screenshots/focus.png" width="200"> | <img src="assets/screenshots/mantra.png" width="200"> | <img src="assets/screenshots/drawer.png" width="200"> |
+| <img src="assets/screenshots/home.png" width="200"> | <img src="assets/screenshots/focus.png" width="200"> | <img src="assets/screenshots/mantra.png" width="200"> | <img src="assets/screenshots/sidebar.png" width="200"> |
 
 
 ## 📲 Installation
