@@ -1216,7 +1216,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // The Version Number
                 Text(
                   _appVersion,
-                  style: const TextStyle(color: Colors.grey, fontSize: 1),
+                  style: const TextStyle(color: Colors.grey, fontSize: 10),
                 ),
               ],
             ),
